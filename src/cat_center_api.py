@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Copyright (c) 2024 Cisco and/or its affiliates.
+Copyright (c) 2026 Cisco and/or its affiliates.
 This software is licensed to you under the terms of the Cisco Sample
 Code License, Version 1.1 (the "License"). You may obtain a copy of the
 License at
@@ -14,7 +14,8 @@ or implied.
 """
 
 __author__ = "Trevor Maco <tmaco@cisco.com>"
-__copyright__ = "Copyright (c) 2024 Cisco and/or its affiliates."
+__contributor__ = "Aron Donaldson <ardonald@cisco.com>"
+__copyright__ = "Copyright (c) 2026 Cisco and/or its affiliates."
 __license__ = "Cisco Sample Code License, Version 1.1"
 
 import secrets
@@ -183,10 +184,63 @@ class CAT_CENTER_API(object):
                                 # Finally add this as a valid floor to select for the migration
                                 floor_to_id[floor['groupNameHierarchy']] = {
                                     "id": floor['id'],
+                                    "parentId": floor['parentId'],
+                                    "name": floor['name'],
+                                    "floorNumber": self.get_floor_details(floor["id"]),
                                     "lat": info['attributes']['latitude'],
                                     "long": info['attributes']['longitude']
                                 }
             return floor_to_id
+        else:
+            return None
+
+
+    def get_floor_details(self, floor_id: str) -> int | None:
+        url = f"{self.CAT_CENTER_INTENT_URL}/v2/floors/{floor_id}"
+        headers = {"Content-Type": "application/json", "Accept": "application/json", "X-Auth-Token": self.x_auth_token}
+        floor = self.get_wrapper(url, headers=headers)
+        if floor:
+            try:
+                floorNumber = floor["floorNumber"]
+            except:
+                floorNumber = None
+            return floorNumber
+        else:
+            return None
+
+
+    def export_buildings(self) -> dict | None:
+        """
+        Create and return mappings of Catalyst Center Buildings
+        :return: Dictionary of Building Name to ID and Lat, Long coordinates
+        """
+        # Get All Catalyst Center Floors
+        sites_v2_url = f"{self.CAT_CENTER_INTENT_URL}/v2/site"
+        headers = {"Content-Type": "application/json", "Accept": "application/json", "X-Auth-Token": self.x_auth_token}
+        params = {"type": "building"}
+
+        buildings = self.get_wrapper(sites_v2_url, headers=headers, params=params)
+
+        # Populate mapping dictionary of floors to ID (only floors with a valid latitude and longitude address)
+        if buildings:
+            building_to_id = {}
+            for building in buildings:
+                # Find and process Location Latitude and Longitude (guaranteed to be there, Cat Center doesn't allow not
+                # providing an address to the building)
+                # Obtain Latitude and Longitude from parent site (building) - assuming we found an address
+                building_to_id[building["name"]] = {
+                    "id": building["id"],
+                    "name": building["name"],
+                    "address": building["additionalInfo"][0]["attributes"]["address"],
+                    "lat": building["additionalInfo"][0]["attributes"]["latitude"],
+                    "long": building["additionalInfo"][0]["attributes"]["longitude"],
+                    "floors": []
+                }
+                # if building["address"] != "":
+                #     building_to_id[building["name"]]["address"] = building["address"]
+                # else:
+                #     address = None
+            return building_to_id
         else:
             return None
 

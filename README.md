@@ -1,5 +1,18 @@
 # Catalyst Center Wireless Floor Maps to Meraki Floor Plans
 
+**FORK NOTES:** This forked version of the original repository contains many updates and improvements to the Catalyst Center and Meraki API scripts, as well as the main Migrate script.  These improvements address the following needs:
+
+- Migrate hierarchies by building, as a whole, rather than one floor at a time
+- Handle iterating properly over multiple floors within a building, without additional input from the user
+- Create buildings first in Meraki, then create Floorplans, and finally assign each Floorplan to its respective building with the correct floor number
+- Handle processing of PNG image files, in addition to JPEG files (including adding support for `.jpeg` file extensions)
+
+The remainder of this project has been left as-is from the original version.
+
+> *Aron Donaldson, Cisco Systems Inc., 10/1/2026*
+
+---
+
 This utility copies Catalyst Center Floor Maps to Meraki Network Floor Plans, uploading the floor plan image and associating devices via MAC Address with the correct Floor Plan in Meraki.
 
 Due to a difference in Catalyst Center Floor Map (X-Y Coordinate) vs Meraki Floor Plan (Latitude, Longitude) schemes, the utility doesn't directly translate the position of devices within Catalyst Center to their corresponding positions within a Meraki Floor Plan. Devices are associated with their Latitude and Longitude set to the Building Address (same as the Meraki Floor Plan Address).

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Copyright (c) 2024 Cisco and/or its affiliates.
+Copyright (c) 2026 Cisco and/or its affiliates.
 This software is licensed to you under the terms of the Cisco Sample
 Code License, Version 1.1 (the "License"). You may obtain a copy of the
 License at
@@ -14,12 +14,14 @@ or implied.
 """
 
 __author__ = "Trevor Maco <tmaco@cisco.com>"
-__copyright__ = "Copyright (c) 2024 Cisco and/or its affiliates."
+__contributor__ = "Aron Donaldson <ardonald@cisco.com>"
+__copyright__ = "Copyright (c) 2026 Cisco and/or its affiliates."
 __license__ = "Cisco Sample Code License, Version 1.1"
 
 from typing import ClassVar, Optional
 
 import meraki
+import requests
 
 from config.config import c
 
@@ -71,7 +73,29 @@ class MERAKI_API(object):
         """
         self._net_name_to_id = net_name_to_id
 
-    def upload_floorplan(self, network_id: str, floor_plan_config: dict) -> tuple[str | None, dict | str]:
+
+    def create_building(self, network_id: str, building_name: str) -> str | None:
+        """
+        The API to create a building is missing from the OpenAPI spec and the SDK, so we will do it manually.
+        :param network_id: Network ID
+        :param building_name: Building Name
+        """
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {c.MERAKI_API_KEY}"
+        }
+        payload = {
+            "name": building_name
+        }
+        url = f"https://api.meraki.com/api/v1/networks/{network_id}/sites/buildings"
+        response = requests.post(url, headers=headers, json=payload)
+        if response.status_code in [200,201]:
+            return response.json()["buildingId"]
+        else:
+            return None
+    
+    
+    def upload_floorplan(self, network_id: str, floor_plan_config: dict, building_id=None) -> tuple[str | None, dict | str]:
         """
         Create Meraki Floor Plan on Network, return response or (error code, error message)
         https://developer.cisco.com/meraki/api-v1/create-network-floor-plan/
@@ -81,12 +105,33 @@ class MERAKI_API(object):
         """
         try:
             response = self.dashboard.networks.createNetworkFloorPlan(network_id, **floor_plan_config)
+            if building_id:
+                result = self.assign_floorplan(network_id, floor_plan_config["name"], response["floorPlanId"], floor_plan_config["floorNumber"], building_id)
             return None, response
         except meraki.APIError as e:
             return e.status, str(e)
         except Exception as e:
             # SDK Error
             return "500", str(e)
+
+
+    def assign_floorplan(self, network_id: str, floorplan_name: str, floorplan_id: str, floor_number: int, building_id: str) -> bool | None:
+        headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {c.MERAKI_API_KEY}"
+                }
+        payload = {
+            "buildingId": building_id,
+            "floorNumber": floor_number,
+            "name": floorplan_name
+        }
+        url = f"https://api.meraki.com/api/v1/networks/{network_id}/floorPlans/{floorplan_id}"
+        response = requests.put(url, headers=headers, json=payload)
+        if response.status_code in [200,201]:
+            return True
+        else:
+            return False
+
 
     def get_network_devices(self, network_id: str) -> tuple[str | None, dict | str]:
         """
