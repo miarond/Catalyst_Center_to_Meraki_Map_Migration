@@ -5,6 +5,12 @@ venv
 # Sensitive Files
 src/config/.env
 
+# Export archives
+*.tar.gz
+*.tar
+*.gz
+*.zip
+
 # IDE files
 .idea
 __pycache__
